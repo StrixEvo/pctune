@@ -1,0 +1,9 @@
+token.dat
+repo.txt
+Logs/
+Telemetry/
+DryRun/
+dist/
+*.sed
+*.zip
+LastRun.txt
