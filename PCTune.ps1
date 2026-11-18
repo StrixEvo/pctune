@@ -968,14 +968,35 @@ function Show-Val {
     return "$Value"
 }
 
-# Log the entries of one Run/RunOnce registry key.
+# Only the program part of a startup command is kept. Arguments can hold
+# secrets, and Logs\ can be read by every user, so they are dropped on purpose.
+# Same rules as Get-ProgramPart in Telemetry.ps1.
+function Get-ProgramPart {
+    param([string]$Command)
+    if ([string]::IsNullOrWhiteSpace($Command)) { return '' }
+    $c = $Command.Trim()
+    if ($c.StartsWith('"')) {
+        $end = $c.IndexOf('"', 1)
+        if ($end -gt 0) { return $c.Substring(1, $end - 1) }
+        return '(unparsed)'
+    }
+    $cut = [regex]::Match($c, '\s[-/]|=')
+    if ($cut.Success) { $c = $c.Substring(0, $cut.Index).TrimEnd() }
+    $m = [regex]::Match($c, '^.*?\.(exe|bat|cmd|com|lnk|vbs|ps1|msc|cpl)\b', [Text.RegularExpressions.RegexOptions]::IgnoreCase)
+    if ($m.Success) { return $m.Value }
+    $sp = $c.IndexOf(' ')
+    if ($sp -gt 0) { return $c.Substring(0, $sp) }
+    return $c
+}
+
+# Log the entries of one Run/RunOnce registry key: name and program only.
 function Write-RunKey {
     param([string]$Key, [string]$Label)
     if (-not (Test-Path -LiteralPath $Key)) { Write-Log "  $Label : (key not present)"; return }
     $props = (Get-ItemProperty -LiteralPath $Key).PSObject.Properties |
              Where-Object { $_.Name -notmatch '^PS(Path|ParentPath|ChildName|Drive|Provider)$' }
     if (-not $props) { Write-Log "  $Label : (empty)"; return }
-    foreach ($p in $props) { Write-Log "  $Label : $($p.Name) = $($p.Value)" }
+    foreach ($p in $props) { Write-Log "  $Label : $($p.Name) = $(Get-ProgramPart ([string]$p.Value))" }
 }
 
 # Log the files in a Startup folder, ignoring desktop.ini.

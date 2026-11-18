@@ -81,6 +81,9 @@ Test 0, a dry run that changes nothing:
       DryRun\LastRun.txt
       DryRun\Logs\PCTune_DryRun.log
       DryRun\reports\YYYY-MM-DD_<PC NAME>.json and .md
+  DryRun\reports\ can only be opened by an administrator, like the real
+  reports. Open it from the admin Command Prompt, for example:
+      notepad C:\PCTune\DryRun\reports\YYYY-MM-DD_<PC NAME>.md
   A dry run does not need Install.bat first. If the folder is not locked
   it logs a WARNING and carries on. Install.bat /dryrun and
   Setup-Telemetry.bat /dryrun (also with /remove) work the same way.
@@ -486,8 +489,10 @@ KNOWN LIMITS
   to change. The link check runs first, but a user who can change the
   scripts could change them between the check and the run. Do dry runs on
   your own PC, or after Install.bat.
-- DryRun\ can be read by every user on the PC, like Logs\. The dry-run
-  report holds the same data as a real report, never the token.
+- DryRun\Logs\ and DryRun\LastRun.txt can be read by every user on the
+  PC, like Logs\. Startup entries in the logs show the program only, never
+  its arguments. DryRun\reports\ and DryRun\samples\ are locked to SYSTEM
+  and Administrators.
 - Install.bat checks for links again after it locks the top folder. A
   file deeper inside that a normal user was allowed to change before the
   install keeps that permission for the few seconds until the owner and

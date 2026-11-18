@@ -667,12 +667,30 @@ function Invoke-CheckPrivateCore {
 # Dry run folders
 # ---------------------------------------------------------------------------
 
-# Creates DryRun\, DryRun\samples and DryRun\reports with default (inherited)
-# permissions. That is the dry run's own output and the only place it writes to.
+# Creates DryRun\, DryRun\samples and DryRun\reports. That is the dry run's own
+# output and the only place it writes to. samples\ and reports\ hold the same
+# data as a real report, so they get the same locked ACL as Telemetry\ (SYSTEM
+# and Administrators only). A new folder is created with that ACL attached; an
+# existing one is checked for links first, then has the ACL set again, which
+# also resets files left by an earlier dry run.
 function New-DryRunDirs {
+    Initialize-TelFs
     if (-not (Test-Path -LiteralPath $Base -PathType Container)) { throw "Base folder not found: $Base" }
+    if (-not (Test-ItemExists $DryDir)) { [void][IO.Directory]::CreateDirectory($DryDir) }
+    $dirSec = New-Object System.Security.AccessControl.DirectorySecurity
+    $dirSec.SetSecurityDescriptorSddlForm($DirSddl, [System.Security.AccessControl.AccessControlSections]::Access)
     foreach ($d in @($DryDir, $SamplesDir, $DryReportsDir)) {
-        if (-not (Test-Path -LiteralPath $d -PathType Container)) { [void][IO.Directory]::CreateDirectory($d) }
+        if ($d -ne $DryDir -and -not (Test-ItemExists $d)) {
+            [void][IO.Directory]::CreateDirectory($d, $dirSec)
+            continue
+        }
+        # A link in place of any of these would send the writes or the ACL
+        # change somewhere else.
+        $final = [PCTuneTelFs]::FinalPath($d)
+        if ($null -eq $final -or -not [string]::Equals($final, [IO.Path]::GetFullPath($d).TrimEnd('\'), [StringComparison]::OrdinalIgnoreCase)) {
+            throw "$d is a link or could not be resolved. Nothing was written."
+        }
+        if ($d -ne $DryDir) { [IO.Directory]::SetAccessControl($d, $dirSec) }
     }
 }
 
